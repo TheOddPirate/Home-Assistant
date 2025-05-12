@@ -230,6 +230,6 @@ action:
         sequence:
           - service: notify.mobile_app_"{{ device_attr(notify_device, 'name') | slugify }}"
             data:
-              title:  "{{ message_title | replace("[devicename]", 'devicename') }}"
-              message: "{{  message_text | replace("[devicename]", 'devicename') }}"
+              title:  "{{ message_title | replace('[devicename]', 'devicename') }}"
+              message: "{{  message_text | replace('[devicename]', 'devicename') }}"
              
