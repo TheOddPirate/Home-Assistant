@@ -35,7 +35,7 @@ blueprint:
     restart_button:
       name: 🔁 Restart Button (Optional)
       description: Button entity to restart the tablet (leave empty to disable).
-      default: {}
+      default: 
       selector:
         entity:
           domain: button
@@ -224,7 +224,7 @@ action:
             entity_id: !input presence_sensor
             state: "off"
           - condition: template
-            value_template: "{{ inputs.restart_button != '' }}"
+            value_template: "{{ inputs.restart_button != none and inputs.restart_button != '' }}"
         sequence:
           - service: button.press
             target:
