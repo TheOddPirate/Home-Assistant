@@ -229,6 +229,6 @@ action:
         sequence:
           - service: "notify.{{ devicename }}"
             data:
-              title:  {{ message_title | replace('$devicename", devicename) }}
-              message: {{  message_text | replace("$devicename", devicename) }}
+              title:  {{ message_title | replace('$devicename', devicename) }}
+              message: {{  message_text | replace('$devicename', devicename) }}
              
