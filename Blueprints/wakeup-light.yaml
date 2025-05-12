@@ -15,7 +15,7 @@ blueprint:
       selector:
         entity:
           domain: light
-          multiple: true
+        multiple: true
     timestamp_sensor:
       name: Alarm timestamp sensor
       description: Sensor with timestamp of next alarm with device_class: timestamp
