@@ -224,11 +224,9 @@ action:
             id: device_unavailable
         sequence:
           - service: "notify.{{ notify_target }}"
-            data:
-              title: >
+            title: >
                 {{ notify_title   | replace('{{ devicename }}', devicename) }}
-              message: >
-                {{ notify_message  | replace('{{ devicename }}', devicename)}} 
-             data:
-                group: tablet_error
-                tag: "tablet_offline_{{ devicename | replace(' ', '_') }}"
+            message: {{ notify_message  | replace('{{ devicename }}', devicename)} 
+              data:
+                  group: tablet_error
+                  tag: "tablet_offline_{{ devicename | replace(' ', '_') }}"
