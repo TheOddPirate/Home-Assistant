@@ -14,7 +14,6 @@ blueprint:
       description: The lights to control. Turning any off during the sunrise will keep it off.
       selector:
         entity:
-          multiple: true
           domain: light    
     timestamp_sensor:
       name: Alarm timestamp sensor
