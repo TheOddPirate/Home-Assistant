@@ -152,10 +152,8 @@ action:
           notify.mobile_app_{{ device_attr(notify_device, "name") | slugify }}
         {% endif %}
       devicename: |
-        {% if (trigger.entity_id != none and trigger.entity_id != '' )  %}
-          "{{ state_attr(trigger.entity_id, 'friendly_name') }}"
-        {% elif (trigger.entity_id != none and trigger.entity_id != '' )  %}
-          "{{ state_attr(trigger.entity_id, 'friendly_name') }}"
+        {% if (this.entity_id != none and this.entity_id != '' )  %}
+          "{{ state_attr(this.entity_id, 'friendly_name') }}"
         {% endif %} 
           
   - choose:
