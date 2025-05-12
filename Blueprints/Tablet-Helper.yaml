@@ -227,9 +227,6 @@ action:
         sequence:
           - service: "notify.{{ device_attr(notify_target, 'name') | slugify }}"
             data:
-              title: >
-                {{ notify_title }}
-              message: >
-                {{ notify_message }} 
-              group: tablet_error
+              title: !input notify_title 
+              message: !input  notify_message
              
