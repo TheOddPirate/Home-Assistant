@@ -229,4 +229,4 @@ action:
             message: {{ notify_message  | replace('{{ devicename }}', devicename)} 
               data:
                   group: tablet_error
-                  tag: "tablet_offline_{{ devicename | replace(' ', '_') }}"
+
