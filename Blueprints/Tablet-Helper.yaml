@@ -11,9 +11,6 @@ blueprint:
       selector:
         entity:
           domain: sensor
-          filter:
-            integration: 
-              - fully_kiosk
     charger_switch:
       name: 🔌 Charger Switch
       description: The switch that controls charging for the tablet.
