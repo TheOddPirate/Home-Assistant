@@ -108,7 +108,8 @@ blueprint:
       selector:
         text:
 
-mode: single
+mode: queued
+max: 10
 trigger:
   - platform: time_pattern
     minutes: "/15"
