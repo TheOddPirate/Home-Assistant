@@ -1,0 +1,166 @@
+blueprint:
+  name: Tablet vedlikehold og styring
+  description: >
+    Håndterer batterilading, skjermstyring og vedlikehold for nettbrett brukt som kontrollpanel.
+    Støtter både switch (Fully Kiosk) og light (BrowserMod) som skjermkontroll.
+  domain: automation
+  input:
+    battery_sensor:
+      name: Batterisensor
+      selector:
+        entity:
+          domain: sensor
+    charger_switch:
+      name: Ladeswitch
+      selector:
+        entity:
+          domain: switch
+    screen_control:
+      name: Skjermkontroll (switch eller light)
+      selector:
+        entity:
+          domain:
+            - switch
+            - light
+    presence_sensor:
+      name: Tilstedeværelsessensor
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: presence
+    restart_button:
+      name: Restart-knapp
+      selector:
+        entity:
+          domain: button
+    notify_device:
+      name: Mobil for varsling
+      selector:
+        device:
+          integration: mobile_app
+
+mode: single
+trigger:
+  - platform: time_pattern
+    minutes: "/15"
+    id: Battery Check
+  - platform: state
+    entity_id: !input presence_sensor
+    from: "on"
+    to: "off"
+    for: "00:00:30"
+    id: Screen off
+  - platform: state
+    entity_id: !input presence_sensor
+    from: "off"
+    to: "on"
+    id: Screen on
+  - platform: time
+    at: "03:00:00"
+    id: Restart device
+  - platform: state
+    entity_id: !input screen_control
+    to: "unavailable"
+    for: "00:10:00"
+    id: Device unavailable notification
+
+condition: []
+
+action:
+  - alias: Lading basert på batterinivå
+    choose:
+      - conditions:
+          - condition: trigger
+            id: Battery Check
+          - condition: state
+            entity_id: !input charger_switch
+            state: "on"
+          - condition: numeric_state
+            entity_id: !input battery_sensor
+            above: 75
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input charger_switch
+
+      - conditions:
+          - condition: trigger
+            id: Battery Check
+          - condition: state
+            entity_id: !input charger_switch
+            state: "off"
+          - condition: numeric_state
+            entity_id: !input battery_sensor
+            below: 35
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input charger_switch
+
+  - alias: Skjermstyring
+    choose:
+      - conditions:
+          - condition: trigger
+            id: Screen off
+          - condition: state
+            entity_id: !input screen_control
+            state: "on"
+          - condition: state
+            entity_id: !input presence_sensor
+            state: "off"
+        sequence:
+          - service: >
+              {% if states[inputs.screen_control].domain == 'light' %}
+                light.turn_off
+              {% else %}
+                switch.turn_off
+              {% endif %}
+            target:
+              entity_id: !input screen_control
+
+      - conditions:
+          - condition: trigger
+            id: Screen on
+          - condition: state
+            entity_id: !input screen_control
+            state: "off"
+          - condition: state
+            entity_id: !input presence_sensor
+            state: "on"
+        sequence:
+          - service: >
+              {% if states[inputs.screen_control].domain == 'light' %}
+                light.turn_on
+              {% else %}
+                switch.turn_on
+              {% endif %}
+            target:
+              entity_id: !input screen_control
+
+  - alias: Vedlikehold og varsling
+    choose:
+      - conditions:
+          - condition: trigger
+            id: Restart device
+          - condition: time
+            weekday:
+              - sat
+          - condition: state
+            entity_id: !input presence_sensor
+            state: "off"
+        sequence:
+          - service: button.press
+            target:
+              entity_id: !input restart_button
+
+      - conditions:
+          - condition: trigger
+            id: Device unavailable notification
+        sequence:
+          - service: notify.mobile_app
+            data:
+              title: Tablet offline
+              message: >-
+                Enheten {{ trigger.entity_id }} er utilgjengelig og bør sjekkes fysisk.
+            target:
+              device_id: !input notify_device
