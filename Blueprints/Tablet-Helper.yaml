@@ -89,20 +89,21 @@ blueprint:
             - value: sun
               label: Sunday
     notify_target:
-      name: 📲 Notification Target
-      description: The `notify.` service for the phone app (e.g. notify.mobile_app_pixel).
+      name: 📲 Notification Target (optional)
+      description: The `notify.` service for the phone app (e.g. notify.mobile_app_pixel) .
+      default:
       selector:
         device:
           filter:
             - integration: mobile_app
     notify_title:
-      name: 🔔 Notification Title
+      name: 🔔 Notification Title (optional)
       description: Custom notification title. `[devicename]` will be replaced with device's friendly name.
       default: Tablet offline
       selector:
         text:
     notify_message:
-      name: 📝 Notification Message
+      name: 📝 Notification Message (optional)
       description: Custom notification message. `[devicename]` will be replaced with device's friendly name.
       default: The tablet [devicename] is offline. Please check its power and network status.
       selector:
@@ -147,6 +148,10 @@ action:
       message_title: !input notify_title
       message_text: !input notify_message
       notify_device: !input notify_target
+      notify_service: |
+        {% if (notify_device != none and notify_device != '' )  %}
+          notify.mobile_app_{{ device_attr(notify_device, "name") | slugify }}
+        {% endif %}
       devicename:  " {{ state_attr(trigger.entity_id, 'friendly_name') }} "
   - choose:
       # Battery control
@@ -229,8 +234,10 @@ action:
       - conditions:
           - condition: trigger
             id: device_unavailable
+          - condition: template
+            value_template: "{{ notify_service != none and notify_service != '' }}"
         sequence:
-          - service: notify.mobile_app_"{{ device_attr(notify_device, 'name') | slugify }}"
+          - service: "{{ notify_service }}"
             data:
               title:  "{{ states('message_title').state | replace('[devicename]', 'devicename') }}"
               message: "{{  states('message_text').state | replace('[devicename]', 'devicename') }}"
