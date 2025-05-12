@@ -39,7 +39,6 @@ blueprint:
       selector:
         entity:
           domain: button
-          multiple: false
     min_battery:
       name: Minimum Battery Percentage
       description: "Charging will resume below this level. Default 35."
