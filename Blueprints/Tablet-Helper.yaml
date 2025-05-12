@@ -142,6 +142,8 @@ trigger:
 condition: []
 action:
   - variables:
+    message_title: !input notify_title
+    message_text: !input notify_message
     devicename: "{{ state_attr(trigger.entity_id, 'friendly_name') or trigger.entity_id }}"
   - choose:
       # Battery control
@@ -227,6 +229,6 @@ action:
         sequence:
           - service: "notify.{{ devicename }}"
             data:
-              title: !input {{ notify_title | replace('{{ devicename }}', devicename) }}
-              message: !input  notify_message | replace('{{ devicename }}', devicename) }}
+              title:  {{ message_title | replace('{{ devicename }}', devicename) }}
+              message: {{  message_text | replace('{{ devicename }}', devicename) }}
              
