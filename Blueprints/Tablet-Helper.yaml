@@ -1,63 +1,119 @@
 blueprint:
-  name: Tablet vedlikehold og styring
+  name: 📱 Tablet Maintenance & Control
   description: >
-    Håndterer batterilading, skjermstyring og vedlikehold for nettbrett brukt som kontrollpanel.
-    Støtter både switch (Fully Kiosk) og light (BrowserMod) som skjermkontroll.
+    📋 Handles charging, screen control, and weekly maintenance for wall-mounted tablets used as smart home dashboards.
+    ⚡ Supports both `switch` (Fully Kiosk) and `light` (BrowserMod) for screen control.
+    🔋 Regulates charging based on customizable battery percentage thresholds.
+    🔁 Restarts tablet weekly if the room is empty, and notifies if the device goes offline.
+
   domain: automation
   input:
     battery_sensor:
-      name: Batterisensor
+      name: 🔋 Battery Sensor
+      description: Sensor that provides battery level (in %)
       selector:
         entity:
           domain: sensor
+
     charger_switch:
-      name: Ladeswitch
+      name: 🔌 Charger Switch
+      description: Switch that turns the tablet charging on or off
       selector:
         entity:
           domain: switch
+
     screen_control:
-      name: Skjermkontroll (switch eller light)
+      name: 🖥️ Screen Control (Switch or Light)
+      description: Entity to control the screen (Fully Kiosk = switch, BrowserMod = light)
       selector:
         entity:
           domain:
             - switch
             - light
+
     presence_sensor:
-      name: Tilstedeværelsessensor
+      name: 🚶 Presence Sensor
+      description: Presence sensor for the room (e.g. mmWave, motion)
       selector:
         entity:
           domain: binary_sensor
           device_class: presence
+
     restart_button:
-      name: Restart-knapp
+      name: 🔁 Restart Button
+      description: Button entity that triggers a restart (e.g. Fully Kiosk restart command)
       selector:
         entity:
           domain: button
+
     notify_device:
-      name: Mobil for varsling
+      name: 📱 Mobile Device for Notifications
+      description: Mobile device to receive notifications (via HA Companion app)
       selector:
         device:
           integration: mobile_app
 
+    battery_min:
+      name: 🔋 Minimum Battery %
+      description: Start charging if battery is below this value
+      default: 35
+      selector:
+        number:
+          min: 1
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+
+    battery_max:
+      name: 🔋 Maximum Battery %
+      description: Stop charging if battery is above this value
+      default: 75
+      selector:
+        number:
+          min: 1
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+
+    notify_title:
+      name: 📨 Notification Title
+      description: Customize the title of the alert when the tablet goes offline
+      default: "📵 Tablet Offline"
+
+    notify_message:
+      name: 💬 Notification Message
+      description: Customize the message. Use `{{ devicename }}` to insert the tablet's name.
+      default: "{{ devicename }} is unavailable. Please check the tablet."
+
 mode: single
+
+variables:
+  devicename: >-
+    {% set eid = trigger.entity_id if trigger is defined else '' %}
+    {{ states[eid].name if eid in states else 'Tablet' }}
+
 trigger:
   - platform: time_pattern
     minutes: "/15"
     id: Battery Check
+
   - platform: state
     entity_id: !input presence_sensor
     from: "on"
     to: "off"
     for: "00:00:30"
     id: Screen off
+
   - platform: state
     entity_id: !input presence_sensor
     from: "off"
     to: "on"
     id: Screen on
+
   - platform: time
     at: "03:00:00"
     id: Restart device
+
   - platform: state
     entity_id: !input screen_control
     to: "unavailable"
@@ -67,7 +123,7 @@ trigger:
 condition: []
 
 action:
-  - alias: Lading basert på batterinivå
+  - alias: 🔋 Battery charging control
     choose:
       - conditions:
           - condition: trigger
@@ -77,7 +133,7 @@ action:
             state: "on"
           - condition: numeric_state
             entity_id: !input battery_sensor
-            above: 75
+            above: !input battery_max
         sequence:
           - service: switch.turn_off
             target:
@@ -91,13 +147,13 @@ action:
             state: "off"
           - condition: numeric_state
             entity_id: !input battery_sensor
-            below: 35
+            below: !input battery_min
         sequence:
           - service: switch.turn_on
             target:
               entity_id: !input charger_switch
 
-  - alias: Skjermstyring
+  - alias: 🖥️ Screen control based on presence
     choose:
       - conditions:
           - condition: trigger
@@ -137,7 +193,7 @@ action:
             target:
               entity_id: !input screen_control
 
-  - alias: Vedlikehold og varsling
+  - alias: 🔁 Maintenance and notification
     choose:
       - conditions:
           - condition: trigger
@@ -159,8 +215,7 @@ action:
         sequence:
           - service: notify.mobile_app
             data:
-              title: Tablet offline
-              message: >-
-                Enheten {{ trigger.entity_id }} er utilgjengelig og bør sjekkes fysisk.
+              title: !input notify_title
+              message: !input notify_message
             target:
               device_id: !input notify_device
