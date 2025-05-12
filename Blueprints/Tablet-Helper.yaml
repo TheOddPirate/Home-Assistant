@@ -226,4 +226,7 @@ action:
           - service: "notify.{{ notify_target }}"
             data:
               title: "{{ notify_title | replace('{{ devicename }}', devicename) }}"
-              mess
+              message: "{{ notify_message | replace('{{ devicename }}', devicename) }}"
+              data:
+                group: tablet_error
+                tag: "tablet_offline_{{ devicename | replace(' ', '_') }}"
