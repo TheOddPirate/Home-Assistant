@@ -10,9 +10,10 @@ blueprint:
       description: The sensor that reports the tablet’s battery level.
       selector:
         entity:
+          domain: sensor
           filter:
             integration: 
-              - fully_kiosk_browser
+              - "fully_kiosk_browser"
     charger_switch:
       name: 🔌 Charger Switch
       description: The switch that controls charging for the tablet.
