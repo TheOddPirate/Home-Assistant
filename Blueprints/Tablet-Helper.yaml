@@ -142,9 +142,9 @@ trigger:
 condition: []
 action:
   - variables:
-    message_title: !input notify_title
-    message_text: !input notify_message
-    devicename: {{ trigger.from_state.attributes.friendly_name }}
+      message_title: !input notify_title
+      message_text: !input notify_message
+      devicename: "{{ trigger.from_state.attributes.friendly_name }}"
   - choose:
       # Battery control
       - conditions:
