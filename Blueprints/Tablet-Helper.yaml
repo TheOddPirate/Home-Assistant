@@ -228,8 +228,8 @@ action:
           - service: "notify.{{ device_attr(notify_target, 'name') | slugify }}"
             data:
               title: >
-                {{ notify_title   | replace('{{ devicename }}', devicename) }}
+                {{ notify_title }}
               message: >
-                {{ notify_message  | replace('{{ devicename }}', devicename) }} 
+                {{ notify_message }} 
               group: tablet_error
-              tag: "tablet_offline_{{ devicename | replace(' ', '_') }}"
+             
