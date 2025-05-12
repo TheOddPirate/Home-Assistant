@@ -151,7 +151,13 @@ action:
         {% if (notify_device != none and notify_device != '' )  %}
           notify.mobile_app_{{ device_attr(notify_device, "name") | slugify }}
         {% endif %}
-      devicename: "{{ state_attr(trigger.event.data.entity_id, 'friendly_name') }}"
+      devicename: |
+        {% if (trigger.entity_id != none and trigger.entity_id != '' )  %}
+          "{{ state_attr(trigger.entity_id, 'friendly_name') }}"
+        {% elif (trigger.entity_id != none and trigger.entity_id != '' )  %}
+          "{{ state_attr(trigger.entity_id, 'friendly_name') }}"
+        {% endif %} 
+          
   - choose:
       # Battery control
       - conditions:
