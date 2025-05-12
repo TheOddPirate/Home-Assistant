@@ -225,8 +225,8 @@ action:
           - condition: trigger
             id: device_unavailable
         sequence:
-          - service: "notify.{{ device_attr(notify_target, 'name') | slugify }}"
+          - service: "notify.{{ devicename }}"
             data:
-              title: !input notify_title 
-              message: !input  notify_message
+              title: !input {{ notify_title | replace('{{ devicename }}', devicename) }}
+              message: !input  notify_message | replace('{{ devicename }}', devicename) }}
              
