@@ -18,7 +18,7 @@ blueprint:
           domain: light    
     timestamp_sensor:
       name: Alarm timestamp sensor
-      description: 'Sensor with timestamp of next alarm with device_class: timestamp (set to ''none'' for manual alarm time)'
+      description: 'Sensor with timestamp of next alarm with device_class set as timestamp (set to ''none'' for manual alarm time)'
       default: none
       selector:
         entity:
