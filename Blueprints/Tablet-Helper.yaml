@@ -91,7 +91,9 @@ blueprint:
       name: 📲 Notification Target
       description: The `notify.` service for the phone app (e.g. notify.mobile_app_pixel).
       selector:
-        text:
+        device:
+          filter:
+            - integration: mobile_app
     notify_title:
       name: 🔔 Notification Title
       description: Custom notification title. `{{ devicename }}` will be replaced with device's friendly name.
@@ -223,10 +225,10 @@ action:
           - condition: trigger
             id: device_unavailable
         sequence:
-          - service: "notify.{{ notify_target }}"
-            title: >
-                {{ notify_title   | replace('{{ devicename }}', devicename) }}
-            message: {{ notify_message  | replace('{{ devicename }}', devicename)} 
+          - service: "notify.{{ device_attr(notify_target, 'name') | slugify }}"
             data:
-                group: tablet_error
-                tag: "tablet_offline_{{ devicename | replace(' ', '_') }}"
+              title: >
+                {{ notify_title   | replace('{{ devicename }}', devicename) }}
+              message: {{ notify_message  | replace('{{ devicename }}', devicename)} 
+              group: tablet_error
+              tag: "tablet_offline_{{ devicename | replace(' ', '_') }}"
