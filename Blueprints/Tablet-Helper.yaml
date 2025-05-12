@@ -1,221 +1,229 @@
 blueprint:
   name: 📱 Tablet Maintenance & Control
-  description: >
-    📋 Handles charging, screen control, and weekly maintenance for wall-mounted tablets used as smart home dashboards.
-    ⚡ Supports both `switch` (Fully Kiosk) and `light` (BrowserMod) for screen control.
-    🔋 Regulates charging based on customizable battery percentage thresholds.
-    🔁 Restarts tablet weekly if the room is empty, and notifies if the device goes offline.
-
+  description: >-
+    Automates battery management, screen control based on presence, optional scheduled restarts, 
+    and offline device notifications for wall-mounted tablets using Fully Kiosk Browser or BrowserMod.
   domain: automation
   input:
     battery_sensor:
-      name: 🔋 Battery Sensor
-      description: Sensor that provides battery level (in %)
+      name: 🔋 Battery Level Sensor
+      description: The sensor that reports the tablet’s battery level.
       selector:
         entity:
           domain: sensor
-
     charger_switch:
       name: 🔌 Charger Switch
-      description: Switch that turns the tablet charging on or off
+      description: The switch that controls charging for the tablet.
       selector:
         entity:
           domain: switch
-
-    screen_control:
-      name: 🖥️ Screen Control (Switch or Light)
-      description: Entity to control the screen (Fully Kiosk = switch, BrowserMod = light)
+    screen_entity:
+      name: 💡 Screen Switch/Light
+      description: The switch/light entity used to turn the screen on or off.
       selector:
         entity:
           domain:
             - switch
             - light
-
     presence_sensor:
       name: 🚶 Presence Sensor
-      description: Presence sensor for the room (e.g. mmWave, motion)
+      description: The binary sensor that detects presence in the room.
       selector:
         entity:
           domain: binary_sensor
-          device_class: presence
-
     restart_button:
-      name: 🔁 Restart Button
-      description: Button entity that triggers a restart (e.g. Fully Kiosk restart command)
+      name: 🔁 Restart Button (Optional)
+      description: Button entity to restart the tablet (leave empty to disable).
+      default: ""
       selector:
         entity:
           domain: button
-
-    notify_device:
-      name: 📱 Mobile Device for Notifications
-      description: Mobile device to receive notifications (via HA Companion app)
-      selector:
-        device:
-          integration: mobile_app
-
-    battery_min:
-      name: 🔋 Minimum Battery %
-      description: Start charging if battery is below this value
+          multiple: false
+    min_battery:
+      name: Minimum Battery Percentage
+      description: Charging will resume below this level. Default: 35.
       default: 35
       selector:
         number:
-          min: 1
+          min: 0
           max: 100
-          step: 1
           unit_of_measurement: "%"
-
-    battery_max:
-      name: 🔋 Maximum Battery %
-      description: Stop charging if battery is above this value
+          mode: slider
+    max_battery:
+      name: Maximum Battery Percentage
+      description: Charging will stop above this level. Default: 75.
       default: 75
       selector:
         number:
-          min: 1
+          min: 0
           max: 100
-          step: 1
           unit_of_measurement: "%"
-
+          mode: slider
+    restart_time:
+      name: ⏰ Restart Time (optional)
+      description: What time of day the tablet should restart (e.g. 03:00:00). Leave empty to disable.
+      default: ""
+      selector:
+        time: {}
+    restart_weekdays:
+      name: 📅 Restart Days (optional)
+      description: Select one or more days for restart to occur. Leave empty to disable restarts.
+      default: []
+      selector:
+        select:
+          multiple: true
+          options:
+            - value: mon
+              label: Monday
+            - value: tue
+              label: Tuesday
+            - value: wed
+              label: Wednesday
+            - value: thu
+              label: Thursday
+            - value: fri
+              label: Friday
+            - value: sat
+              label: Saturday
+            - value: sun
+              label: Sunday
+    notify_target:
+      name: 📲 Notification Target
+      description: The `notify.` service for the phone app (e.g. notify.mobile_app_pixel).
+      selector:
+        text:
     notify_title:
-      name: 📨 Notification Title
-      description: Customize the title of the alert when the tablet goes offline
-      default: "📵 Tablet Offline"
-
+      name: 🔔 Notification Title
+      description: Custom notification title. `{{ devicename }}` will be replaced with device's friendly name.
+      default: Tablet offline
+      selector:
+        text:
     notify_message:
-      name: 💬 Notification Message
-      description: Customize the message. Use `{{ devicename }}` to insert the tablet's name.
-      default: "{{ devicename }} is unavailable. Please check the tablet."
+      name: 📝 Notification Message
+      description: Custom notification message. `{{ devicename }}` will be replaced with device's friendly name.
+      default: The tablet {{ devicename }} is offline. Please check its power and network status.
+      selector:
+        text:
 
 mode: single
-
-variables:
-  devicename: >-
-    {% set eid = trigger.entity_id if trigger is defined else '' %}
-    {{ states[eid].name if eid in states else 'Tablet' }}
-
 trigger:
   - platform: time_pattern
     minutes: "/15"
-    id: Battery Check
+    id: battery_check
 
   - platform: state
     entity_id: !input presence_sensor
     from: "on"
     to: "off"
     for: "00:00:30"
-    id: Screen off
+    id: screen_off
 
   - platform: state
     entity_id: !input presence_sensor
     from: "off"
     to: "on"
-    id: Screen on
+    id: screen_on
 
-  - platform: time
-    at: "03:00:00"
-    id: Restart device
+  - platform: template
+    id: restart_device
+    value_template: >
+      {% set t = states('sensor.time') %}
+      {% set restart = inputs.restart_time %}
+      {{ t == (restart or 'invalid')[:5] }}
 
   - platform: state
-    entity_id: !input screen_control
-    to: "unavailable"
+    entity_id: !input screen_entity
+    to: unavailable
     for: "00:10:00"
-    id: Device unavailable notification
+    id: device_unavailable
 
 condition: []
-
 action:
-  - alias: 🔋 Battery charging control
-    choose:
+  - choose:
+      # Battery control
       - conditions:
           - condition: trigger
-            id: Battery Check
+            id: battery_check
+          - condition: numeric_state
+            entity_id: !input battery_sensor
+            above: !input max_battery
           - condition: state
             entity_id: !input charger_switch
             state: "on"
-          - condition: numeric_state
-            entity_id: !input battery_sensor
-            above: !input battery_max
         sequence:
           - service: switch.turn_off
             target:
               entity_id: !input charger_switch
-
       - conditions:
           - condition: trigger
-            id: Battery Check
+            id: battery_check
+          - condition: numeric_state
+            entity_id: !input battery_sensor
+            below: !input min_battery
           - condition: state
             entity_id: !input charger_switch
             state: "off"
-          - condition: numeric_state
-            entity_id: !input battery_sensor
-            below: !input battery_min
         sequence:
           - service: switch.turn_on
             target:
               entity_id: !input charger_switch
 
-  - alias: 🖥️ Screen control based on presence
-    choose:
+      # Screen off
       - conditions:
           - condition: trigger
-            id: Screen off
+            id: screen_off
           - condition: state
-            entity_id: !input screen_control
+            entity_id: !input screen_entity
             state: "on"
           - condition: state
             entity_id: !input presence_sensor
             state: "off"
         sequence:
-          - service: >
-              {% if states[inputs.screen_control].domain == 'light' %}
-                light.turn_off
-              {% else %}
-                switch.turn_off
-              {% endif %}
+          - service: homeassistant.turn_off
             target:
-              entity_id: !input screen_control
+              entity_id: !input screen_entity
 
+      # Screen on
       - conditions:
           - condition: trigger
-            id: Screen on
+            id: screen_on
           - condition: state
-            entity_id: !input screen_control
+            entity_id: !input screen_entity
             state: "off"
           - condition: state
             entity_id: !input presence_sensor
             state: "on"
         sequence:
-          - service: >
-              {% if states[inputs.screen_control].domain == 'light' %}
-                light.turn_on
-              {% else %}
-                switch.turn_on
-              {% endif %}
+          - service: homeassistant.turn_on
             target:
-              entity_id: !input screen_control
+              entity_id: !input screen_entity
 
-  - alias: 🔁 Maintenance and notification
-    choose:
+      # Restart tablet (if enabled and no presence)
       - conditions:
           - condition: trigger
-            id: Restart device
-          - condition: time
-            weekday:
-              - sat
+            id: restart_device
+          - condition: template
+            value_template: >
+              {% set today = now().strftime('%a') | lower %}
+              {{ today[:3] in inputs.restart_weekdays }}
           - condition: state
             entity_id: !input presence_sensor
             state: "off"
+          - condition: template
+            value_template: "{{ inputs.restart_button != '' }}"
         sequence:
           - service: button.press
             target:
               entity_id: !input restart_button
 
+      # Notify when device is unavailable
       - conditions:
           - condition: trigger
-            id: Device unavailable notification
+            id: device_unavailable
         sequence:
-          - service: notify.mobile_app
+          - variables:
+              devicename: "{{ state_attr(trigger.entity_id, 'friendly_name') or trigger.entity_id }}"
+          - service: "notify.{{ notify_target }}"
             data:
-              title: !input notify_title
-              message: !input notify_message
-            target:
-              device_id: !input notify_device
+              title: "{{ notify_title | replace('{{ devicename }}', devicename) }}"
+              mess
