@@ -12,9 +12,9 @@ blueprint:
         entity:
           filter:
             integration: 
-              - mobile_app
-              - fully_kiosk_browser
-              - browser_mod
+              - "mobile_app"
+              - "fully_kiosk_browser"
+              - "browser_mod"
             domain: sensor
     charger_switch:
       name: 🔌 Charger Switch
