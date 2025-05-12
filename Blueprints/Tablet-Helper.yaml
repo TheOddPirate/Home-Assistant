@@ -144,6 +144,7 @@ action:
   - variables:
       message_title: !input notify_title
       message_text: !input notify_message
+      notify_device: !input notify_target
       devicename:  " {{ state_attr(trigger.entity_id, 'friendly_name') }} "
   - choose:
       # Battery control
@@ -227,7 +228,7 @@ action:
           - condition: trigger
             id: device_unavailable
         sequence:
-          - service: notify.mobile_app_"{{ devicename }}"
+          - service: notify.mobile_app_"{{ device_attr(notify_device, 'name') | slugify }}"
             data:
               title:  "{{ message_title }}"
               message: "{{  message_text}}"
