@@ -90,7 +90,7 @@ blueprint:
     notify_target:
       name: 📲 Notification Target (optional)
       description: The `notify.` service for the phone app (e.g. notify.mobile_app_pixel) .
-      default:
+      default: none
       selector:
         device:
           filter:
