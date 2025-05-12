@@ -96,14 +96,14 @@ blueprint:
             - integration: mobile_app
     notify_title:
       name: 🔔 Notification Title
-      description: Custom notification title. `{{ devicename }}` will be replaced with device's friendly name.
+      description: Custom notification title. `$devicename` will be replaced with device's friendly name.
       default: Tablet offline
       selector:
         text:
     notify_message:
       name: 📝 Notification Message
-      description: Custom notification message. `{{ devicename }}` will be replaced with device's friendly name.
-      default: The tablet {{ devicename }} is offline. Please check its power and network status.
+      description: Custom notification message. `$devicename` will be replaced with device's friendly name.
+      default: The tablet $devicename is offline. Please check its power and network status.
       selector:
         text:
 
@@ -229,6 +229,6 @@ action:
         sequence:
           - service: "notify.{{ devicename }}"
             data:
-              title:  {{ message_title | replace("{{ devicename }}", devicename) }}
-              message: {{  message_text | replace("{{ devicename }}", devicename) }}
+              title:  {{ message_title | replace('$devicename", devicename) }}
+              message: {{  message_text | replace("$devicename", devicename) }}
              
