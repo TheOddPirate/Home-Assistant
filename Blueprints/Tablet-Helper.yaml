@@ -11,7 +11,8 @@ blueprint:
       selector:
         entity:
           filter:
-            - integration: fully_kiosk_browser
+            integration: 
+              - fully_kiosk_browser
     charger_switch:
       name: 🔌 Charger Switch
       description: The switch that controls charging for the tablet.
