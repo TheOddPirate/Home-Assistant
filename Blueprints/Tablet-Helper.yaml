@@ -41,7 +41,7 @@ blueprint:
           multiple: false
     min_battery:
       name: Minimum Battery Percentage
-      description: "Charging will resume below this level. Default: 35."
+      description: "Charging will resume below this level. Default 35."
       default: 35
       selector:
         number:
@@ -51,7 +51,7 @@ blueprint:
           mode: slider
     max_battery:
       name: Maximum Battery Percentage
-      description: "Charging will stop above this level. Default: 75."
+      description: "Charging will stop above this level. Default 75."
       default: 75
       selector:
         number:
