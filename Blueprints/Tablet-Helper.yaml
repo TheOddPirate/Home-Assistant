@@ -144,7 +144,7 @@ action:
   - variables:
     message_title: !input notify_title
     message_text: !input notify_message
-    devicename: "{{ state_attr(trigger.entity_id, 'friendly_name') or trigger.entity_id }}"
+    devicename: {{ trigger.from_state.attributes.friendly_name }}
   - choose:
       # Battery control
       - conditions:
