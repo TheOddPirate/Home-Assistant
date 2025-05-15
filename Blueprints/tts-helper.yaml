@@ -1,0 +1,135 @@
+blueprint:
+  name: "TTS in active room"
+  description: "Speak a TTS message on the media player in the first room where presence is detected. Configure rooms with sensors, players, and day/night volumes."
+  domain: script
+  input:
+    msg:
+      name: "Message to speak"
+      description: "The text that will be spoken via TTS"
+      selector:
+        text:
+      required: true
+    rooms:
+      name: "Room configurations"
+      description: "List of rooms with presence sensor, media player, and volume levels"
+      selector:
+        list:
+          min: 1
+          object:
+            properties:
+              presence_sensor:
+                name: "Presence sensor"
+                selector:
+                  entity:
+                    domain: binary_sensor
+              media_player:
+                name: "Media player"
+                selector:
+                  entity:
+                    domain: media_player
+              day_volume:
+                name: "Day volume level"
+                description: "Volume when sun is above horizon (0.0–1.0)"
+                selector:
+                  number:
+                    min: 0
+                    max: 1
+                    step: 0.01
+              night_volume:
+                name: "Night volume level"
+                description: "Volume when sun is below horizon (0.0–1.0)"
+                selector:
+                  number:
+                    min: 0
+                    max: 1
+                    step: 0.01
+
+script:
+  alias: "TTS in active room"
+  mode: queued
+  max: 25
+  icon: mdi:speaker-message
+  description: >-
+    TTS script that speaks a message on the media player in the first room
+    where presence is detected, using configurable day/night volumes per room.
+  sequence:
+    - variables:
+        # Find the first room where presence_sensor is 'on'
+        active_room: >-
+          {{ rooms | selectattr('presence_sensor', 'is_state', 'on') | list | first(default=None) }}
+        media_player: >-
+          {{ active_room.media_player if active_room else none }}
+        volume_set: >-
+          {% if media_player and is_state('sun.sun','below_horizon') %}
+            {{ active_room.night_volume }}
+          {% elif media_player %}
+            {{ active_room.day_volume }}
+          {% else %}
+            0.20
+          {% endif %}
+        tts_engine: "{{ states('input_select.tts_engine') | lower }}"
+        tts_service: >-
+          {% if tts_engine in ['nabucloud','google','piper'] %}
+            {% set services = { 'nabucloud':'tts.home_assistant_cloud', 'google':'tts.google_translate_say', 'piper':'tts.piper' } %}
+            {{ services[tts_engine] }}
+          {% elif tts_engine == 'off' %}
+            none
+          {% else %}
+            tts.piper
+          {% endif %}
+    - condition: template
+      alias: "Ensure valid target and TTS"
+      description: "Stop if no active room or TTS disabled"
+      value_template: >-
+        {{ media_player is not none and tts_service != 'none' }}
+    - variables:
+        original_state: "{{ states(media_player) }}"
+        original_volume: "{{ state_attr(media_player,'volume_level') }}"
+        original_media_id: "{{ state_attr(media_player,'media_content_id') }}"
+        original_media_type: "{{ state_attr(media_player,'media_content_type') }}"
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: "{{ original_state == 'playing' }}"
+          sequence:
+            - service: media_player.media_pause
+              target:
+                entity_id: "{{ media_player }}"
+      alias: "Pause current media"
+    - service: media_player.volume_set
+      target:
+        entity_id: "{{ media_player }}"
+      data:
+        volume_level: "{{ volume_set }}"
+    - service: "{{ tts_service }}"
+      data:
+        entity_id: "{{ media_player }}"
+        message: "{{ msg }}"
+    - wait_for_trigger:
+        - platform: template
+          value_template: "{{ is_state(media_player,'playing') }}"
+      timeout: '00:00:05'
+    - wait_for_trigger:
+        - platform: template
+          value_template: >-
+            {{ is_state(media_player,'idle') or is_state(media_player,'off') }}
+      timeout: '00:01:00'
+    - choose:
+        - conditions:
+            - condition: template
+              value_template: >-
+                {{ original_state=='playing' and original_media_id and original_media_type }}
+          sequence:
+            - service: media_player.volume_set
+              target:
+                entity_id: "{{ media_player }}"
+              data:
+                volume_level: "{{ original_volume | default(0.5) }}"
+            - delay: '00:00:01'
+            - service: media_player.play_media
+              target:
+                entity_id: "{{ media_player }}"
+              data:
+                media_content_id: "{{ original_media_id }}"
+                media_content_type: "{{ original_media_type }}"
+      alias: "Restore previous media"
