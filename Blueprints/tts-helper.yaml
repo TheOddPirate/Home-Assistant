@@ -12,7 +12,7 @@ blueprint:
       name: "Room configurations"
       description: "List of rooms with presence sensor, media player, and day/night volumes"
       selector:
-        list:
+        select:
           min: 1
           item:
             selector:
