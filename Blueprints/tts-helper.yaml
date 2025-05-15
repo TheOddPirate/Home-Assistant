@@ -1,48 +1,49 @@
 blueprint:
   name: "TTS in active room"
-  description: "Speak a TTS message on the media player in the first room where presence is detected. Configure rooms with sensors, players, and day/night volumes."
+  description: "Speak a TTS message on the media player in the first room where presence is detected. Configure rooms with presence sensor, media player, and volumes."
   domain: script
   input:
     msg:
       name: "Message to speak"
       description: "The text that will be spoken via TTS"
       selector:
-        text:
-      required: true
+        text: {}
     rooms:
       name: "Room configurations"
-      description: "List of rooms with presence sensor, media player, and volume levels"
+      description: "List of rooms with presence sensor, media player, and day/night volumes"
       selector:
         list:
           min: 1
-          object:
-            properties:
-              presence_sensor:
-                name: "Presence sensor"
-                selector:
-                  entity:
-                    domain: binary_sensor
-              media_player:
-                name: "Media player"
-                selector:
-                  entity:
-                    domain: media_player
-              day_volume:
-                name: "Day volume level"
-                description: "Volume when sun is above horizon (0.0–1.0)"
-                selector:
-                  number:
-                    min: 0
-                    max: 1
-                    step: 0.01
-              night_volume:
-                name: "Night volume level"
-                description: "Volume when sun is below horizon (0.0–1.0)"
-                selector:
-                  number:
-                    min: 0
-                    max: 1
-                    step: 0.01
+          item:
+            selector:
+              object:
+                properties:
+                  presence_sensor:
+                    name: "Presence sensor"
+                    selector:
+                      entity:
+                        domain: binary_sensor
+                  media_player:
+                    name: "Media player"
+                    selector:
+                      entity:
+                        domain: media_player
+                  day_volume:
+                    name: "Day volume level"
+                    description: "Volume when sun is above horizon (0.0–1.0)"
+                    selector:
+                      number:
+                        min: 0
+                        max: 1
+                        step: 0.01
+                  night_volume:
+                    name: "Night volume level"
+                    description: "Volume when sun is below horizon (0.0–1.0)"
+                    selector:
+                      number:
+                        min: 0
+                        max: 1
+                        step: 0.01
 
 script:
   alias: "TTS in active room"
@@ -51,10 +52,9 @@ script:
   icon: mdi:speaker-message
   description: >-
     TTS script that speaks a message on the media player in the first room
-    where presence is detected, using configurable day/night volumes per room.
+    where presence is detected, using configured day/night volumes.
   sequence:
     - variables:
-        # Find the first room where presence_sensor is 'on'
         active_room: >-
           {{ rooms | selectattr('presence_sensor', 'is_state', 'on') | list | first(default=None) }}
         media_player: >-
@@ -79,7 +79,6 @@ script:
           {% endif %}
     - condition: template
       alias: "Ensure valid target and TTS"
-      description: "Stop if no active room or TTS disabled"
       value_template: >-
         {{ media_player is not none and tts_service != 'none' }}
     - variables:
