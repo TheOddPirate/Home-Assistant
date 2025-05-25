@@ -3,13 +3,16 @@
 LDAP-autentisering for Home Assistant.
 Testet og tilpasset for bruk med Authentik.
 
+
+
 Funksjoner:
 - Automatisk installasjon av manglende pip-pakker
 - Bruk av helper-konto for å gjøre initialt søk
 - Autentisering av bruker mot Authentik LDAP
 - Sjekk for grupper (admin/guest)
 
-Original: https://github.com/panteLx/HASS-LDAP-Auth
+Original med instrukser: 
+https://github.com/panteLx/HASS-LDAP-Auth
 """
 
 import os
@@ -35,7 +38,7 @@ def eprint(*args, **kwargs):
 # === Brukerne må vøre medlem av enten "admin" eller "guest" grupppe ===
 SERVER = "ldap://192.168.86.3:389"
 HELPERDN = "cn=ldapservice,ou=users,DC=ldap,DC=goauthentik,DC=io"
-HELPERPASS = "ldapservice/"
+HELPERPASS = "ldapservice"
 BASEDN = "dc=ldap,dc=goauthentik,dc=io"
 TIMEOUT = 3
 
