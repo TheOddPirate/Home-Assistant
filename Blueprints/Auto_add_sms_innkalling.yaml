@@ -1,0 +1,114 @@
+blueprint:
+  name: SMS-innkalling til kalender
+  description: >
+    Analyserer varslinger fra telefonen (f.eks. Google Messages) og legger inn relevante avtaler i kalenderen.
+    Bruker LLM (f.eks. ChatGPT) for å trekke ut avtaledetaljer.
+  domain: automation
+  input:
+    sms_sensor:
+      name: SMS-varsling sensor
+      description: Sensor som viser siste varseltekst (typisk fra Android-telefon, f.eks. `sensor.n0tphone_last_notification`)
+      selector:
+        entity:
+          domain: sensor
+    kalender_entity:
+      name: Kalender
+      description: Kalenderen hvor avtaler skal legges til
+      selector:
+        entity:
+          domain: calendar
+    conversation_entity:
+      name: Conversation agent
+      description: Conversation agent used to identify the appointments
+      selector:
+        entity:
+          domain: conversation
+          
+    avsender_filter:
+      name: Filter for avsendere
+      description: Liste over tillatte avsendere (f.eks. ["Helsenorge"])
+      default: ["Helsenorge"]
+      selector:
+        object: {}
+    app_filter:
+      name: Filter for meldings apper
+      description: navnet på tillatt meldings app (f.eks. "com.google.android.apps.messaging" for google messages)
+      default: "com.google.android.apps.messaging"
+      selector:
+        text:
+
+
+trigger:
+  - platform: state
+    entity_id: !input sms_sensor
+
+condition:
+  - condition: template
+    value_template: >-
+      {{ input.app_filter in trigger.to_state.attributes["android.appInfo"]  and 
+      trigger.to_state.attributes["android.title"] in input.avsender_filter }}
+
+variables:
+  sms_text: "{{ trigger.to_state.attributes['android.messages'] }}"
+  llm_prompt: >
+    Dette er en text melding, jeg trenger å vite om dette er en avtale som,
+    burde føres opp i kalenderen. Om det er en avtale trenger jeg at du
+    svarer meg i reint json format og fyller ut "title", "description",
+    "timestart", "timeend", "lokasjon" (om lokasjon er util med passende
+    informasjon som matcher denne sms). Jeg trenger at timestart og timeend
+    blir fylt ut i et format som passer denne tids stringen "2025-05-28 14:00:00".
+    Om du ikke finner lengde på avtale, så kan du som standard sette den to
+    timer etter start. Om du ikke finner en lokasjon/adresse fra texten,
+    sett bare som tom string. Om dette ikke er en avtale, så vil jeg at du
+    svarer med "False" og ingenting mer. Her er sms texten:
+    "{{ sms_text }}"
+
+action:
+  - alias: Send til ChatGPT for analyse
+    response_variable: llm_response
+    data:
+      agent_id: conversation.chatgpt_4
+      text: "{{ llm_prompt }}"
+    action: conversation.process
+
+  - alias: Avslutt hvis ikke en avtale
+    condition: template
+    value_template: |
+      {{ llm_response.response.speech.plain.speech != "False" }}
+
+  - alias: Parse LLM JSON
+    variables:
+      llm_json: >-
+        {{ llm_response.response.speech.plain.speech | replace('```','') | replace('json','') | from_json }}
+      event_title: "{{ llm_json.title }}"
+      event_description: "{{ llm_json.description }}"
+      event_start: "{{ llm_json.timestart }}"
+      event_end: "{{ llm_json.timeend }}"
+      event_location: "{{ llm_json.lokasjon }}"
+
+  - alias: Hent eksisterende kalenderhendelser for tidspunkt
+    response_variable: existing_events
+    data:
+      start_date_time: "{{ event_start }}"
+      duration: "01:00:00"
+    target:
+      entity_id: !input kalender_entity
+    action: calendar.get_events
+
+  - alias: Avslutt hvis det allerede finnes en avtale
+    condition: template
+    value_template: |
+      {{ existing_events[inputs.kalender_entity]["events"] | length == 0 }}
+
+  - alias: Opprett avtale i kalender
+    data:
+      summary: "{{ event_title }}"
+      description: "{{ event_description }}"
+      start_date_time: "{{ event_start }}"
+      end_date_time: "{{ event_end }}"
+      location: "{{ event_location }}"
+    target:
+      entity_id: !input kalender_entity
+    action: calendar.create_event
+
+mode: single
